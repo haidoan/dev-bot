@@ -43,7 +43,7 @@ since}}`]);
         const { owner, repo } = await getRepoInfo();
         const sourceBranch = (await git.branchLocal()).current;
         await git.push('origin', sourceBranch, { '--set-upstream': null });
-        const { data: pr } = await octokit.pulls.create({
+        const { data: pr } = await octokit.rest.pulls.create({
             owner,
             repo,
             title,
@@ -52,7 +52,7 @@ since}}`]);
             base: target_branch,
         });
         if (reviewers) {
-            await octokit.pulls.requestReviewers({
+            await octokit.rest.pulls.requestReviewers({
                 owner,
                 repo,
                 pull_number: pr.number,

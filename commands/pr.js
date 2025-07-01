@@ -45,7 +45,7 @@ async function createPr(options) {
         await git.push('origin', sourceBranch, { '--set-upstream': null });
 
         spinner.text = 'Creating pull request on GitHub...';
-        const { data: pr } = await octokit.pulls.create({
+        const { data: pr } = await octokit.rest.pulls.create({
             owner,
             repo,
             title,
@@ -56,7 +56,7 @@ async function createPr(options) {
 
         if (options.reviewers) {
             spinner.text = 'Requesting reviewers...';
-            await octokit.pulls.requestReviewers({
+            await octokit.rest.pulls.requestReviewers({
                 owner,
                 repo,
                 pull_number: pr.number,
@@ -81,7 +81,7 @@ async function approvePr(prNumber, options) {
 
         if (!pullNumber) {
             spinner.text = 'Fetching pull requests...';
-            const { data: prs } = await octokit.pulls.list({ owner, repo, state: 'open' });
+            const { data: prs } = await octokit.rest.pulls.list({ owner, repo, state: 'open' });
             spinner.stop();
 
             if (prs.length === 0) {
@@ -104,7 +104,7 @@ async function approvePr(prNumber, options) {
         }
         
         spinner.start('Approving pull request...');
-        await octokit.pulls.createReview({
+        await octokit.rest.pulls.createReview({
             owner,
             repo,
             pull_number: pullNumber,
