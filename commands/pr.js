@@ -28,6 +28,17 @@ async function createPr(options) {
         const sourceBranch = options.source || (await git.branchLocal()).current;
         const targetBranch = options.target || 'develop';
 
+        if (sourceBranch === targetBranch) {
+            throw new Error(`Source branch (${sourceBranch}) and target branch (${targetBranch}) cannot be the same.`);
+        }
+
+        spinner.text = 'Verifying target branch on remote...';
+        await git.fetch();
+        const branches = await git.branch(['-r']);
+        if (!branches.all.includes(`origin/${targetBranch}`)) {
+            throw new Error(`Target branch '${targetBranch}' does not exist on the remote repository. Please check the branch name.`);
+        }
+
         let title = options.title;
         if (!title) {
             if (sourceBranch.match(/[a-zA-Z]+-[0-9]+/)) {

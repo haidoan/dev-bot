@@ -42,6 +42,14 @@ since}}`]);
     async create_pr({ target_branch, reviewers, title }) {
         const { owner, repo } = await getRepoInfo();
         const sourceBranch = (await git.branchLocal()).current;
+        if (sourceBranch === target_branch) {
+            throw new Error(`Source branch (${sourceBranch}) and target branch (${target_branch}) cannot be the same.`);
+        }
+        await git.fetch();
+        const branches = await git.branch(['-r']);
+        if (!branches.all.includes(`origin/${target_branch}`)) {
+            throw new Error(`Target branch '${target_branch}' does not exist on the remote repository. Please check the branch name.`);
+        }
         await git.push('origin', sourceBranch, { '--set-upstream': null });
         const { data: pr } = await octokit.rest.pulls.create({
             owner,
