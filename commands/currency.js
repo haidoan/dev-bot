@@ -20,14 +20,18 @@ async function getRates() {
 
 function parseRates(xmlData) {
     const rates = {};
-    const regex = /<Exrate CurrencyCode="(\w+)" CurrencyName="([^"]+)" Buy="([^"]+)" Transfer="([^"]+)" Sell="([^"]+)"\/>/g;
+    const regex = /<Exrate CurrencyCode="(\w+)" CurrencyName="([^"]+)" Buy="([^"]*)" Transfer="([^"]*)" Sell="([^"]*)"[^>]*\/>/g;
     let match;
     while ((match = regex.exec(xmlData)) !== null) {
+        const buyValue = match[3] === '-' ? 0 : parseFloat(match[3].replace(/,/g, ''));
+        const transferValue = match[4] === '-' ? 0 : parseFloat(match[4].replace(/,/g, ''));
+        const sellValue = match[5] === '-' ? 0 : parseFloat(match[5].replace(/,/g, ''));
+        
         rates[match[1]] = {
-            name: match[2],
-            buy: parseFloat(match[3].replace(/,/g, '')),
-            transfer: parseFloat(match[4].replace(/,/g, '')),
-            sell: parseFloat(match[5].replace(/,/g, '')),
+            name: match[2].trim(),
+            buy: buyValue || transferValue, // Use transfer if buy is not available
+            transfer: transferValue,
+            sell: sellValue || transferValue, // Use transfer if sell is not available
         };
     }
     return rates;
