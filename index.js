@@ -1,12 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { readdir } from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { commandRegistry } from './lib/commands.js';
 
 const program = new Command();
 
@@ -15,22 +10,38 @@ program
   .description('A CLI helper bot powered by AI')
   .version('2.0.0');
 
-async function loadCommands() {
-  const commandsPath = path.join(__dirname, 'commands');
-  const commandFiles = await readdir(commandsPath);
+function buildCommands() {
+    const commandMap = new Map();
 
-  for (const file of commandFiles) {
-    if (file.endsWith('.js')) {
-      const commandModule = await import(path.join(commandsPath, file));
-      if (commandModule.default && typeof commandModule.default === 'function') {
-        commandModule.default(program);
-      }
-    }
-  }
+    commandRegistry.forEach(cmdDef => {
+        const [main, sub] = cmdDef.name.split(' ');
+        
+        let parentCommand = commandMap.get(main);
+        if (!parentCommand) {
+            parentCommand = program.command(main).description(`${main} commands`);
+            commandMap.set(main, parentCommand);
+        }
+
+        const command = sub ? parentCommand.command(sub) : parentCommand;
+        
+        command.description(cmdDef.description);
+
+        if (cmdDef.args) {
+            cmdDef.args.forEach(arg => command.argument(arg.name, arg.description));
+        }
+
+        if (cmdDef.options) {
+            cmdDef.options.forEach(opt => command.option(opt.flag, opt.description));
+        }
+
+        command.action(cmdDef.action);
+    });
 }
 
+
 async function main() {
-  await loadCommands();
+  buildCommands();
+  // I will add back the dynamic loading for other commands later
   program.parse(process.argv);
 }
 
