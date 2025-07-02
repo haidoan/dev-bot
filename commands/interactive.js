@@ -13,8 +13,8 @@ const model = genAI.getGenerativeModel({
     model: 'gemini-1.5-flash-latest',
     systemInstruction: `You are a helpful AI assistant for a software developer.
     You have access to a set of tools to help the user with their tasks.
-    When a user asks for something, first determine if a tool can be used.
-    If a tool is appropriate, use it. Otherwise, respond to the user directly.
+    For any request that can be fulfilled by a tool, you MUST use the tool. Do not attempt to answer directly if a tool is available.
+    If the user asks for a currency exchange rate (e.g., "USD to VND rate"), you MUST use the 'convert_currency' tool. If no amount is specified, assume an amount of 1.
     If you use a tool, explain what you did and the result.`,
 });
 
@@ -44,19 +44,43 @@ async function interactiveChat() {
         const spinner = ora('Thinking...').start();
         try {
             const result = await chat.sendMessage(prompt);
-            const call = result.response.functionCalls()?.[0];
+            const functionCalls = result.response.functionCalls();
 
-            if (call) {
-                const { name, args } = call;
-                spinner.text = `Using tool: ${name}...`;
-                const toolResult = await tools[name](args);
-                spinner.succeed(`Tool ${name} finished.`);
+            if (functionCalls && functionCalls.length > 0) {
+                for (const call of functionCalls) {
+                    const { name, args } = call;
+                    console.log(chalk.yellow(`
+Bot: I'm planning to use the tool: ${chalk.bold(name)} with arguments:`));
+                    console.log(chalk.cyan(JSON.stringify(args, null, 2)));
 
-                if (name === 'review_pr' && toolResult.summary) {
-                    const formattedSummary = toolResult.summary.replace(/\*\*(.*?)\*\*/g, chalk.bold.yellow('$1'));
-                    console.log(chalk.yellow('Bot:'), chalk.cyan(formattedSummary));
-                } else {
-                    console.log(chalk.yellow('Bot:'), chalk.cyan(JSON.stringify(toolResult, null, 2)));
+                    const { confirmTool } = await inquirer.prompt([
+                        {
+                            type: 'confirm',
+                            name: 'confirmTool',
+                            message: chalk.green('Do you want to proceed with this tool execution?'),
+                            default: true,
+                        },
+                    ]);
+
+                    if (confirmTool) {
+                        spinner.text = `Using tool: ${name}...`;
+                        const toolResult = await tools[name](args);
+                        spinner.succeed(`Tool ${name} finished.`);
+
+                        const toolResponse = {
+                            functionResponse: {
+                                name,
+                                response: toolResult,
+                            },
+                        };
+
+                        const finalResult = await chat.sendMessage(JSON.stringify(toolResponse));
+                        console.log(chalk.yellow('Bot:'), chalk.cyan(finalResult.response.text()));
+
+                    } else {
+                        spinner.fail(`Tool ${name} execution skipped by user.`);
+                        console.log(chalk.yellow('Bot:'), chalk.red('Tool execution cancelled.'));
+                    }
                 }
             } else {
                 spinner.succeed('Done!');
@@ -69,9 +93,4 @@ async function interactiveChat() {
     }
 }
 
-export default function (program) {
-    program
-        .command('interactive')
-        .description('Start an interactive chat session with the bot')
-        .action(interactiveChat);
-}
+export default interactiveChat;
