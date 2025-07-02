@@ -1,4 +1,3 @@
-import { Command } from 'commander';
 import simpleGit from 'simple-git';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
@@ -21,12 +20,23 @@ async function getCurrentRepo() {
     return { owner, repo };
 }
 
-async function createPr(options) {
+export async function createPr(options) {
     const spinner = ora('Creating pull request...').start();
     try {
         const { owner, repo } = await getCurrentRepo();
         const sourceBranch = options.source || (await git.branchLocal()).current;
         const targetBranch = options.target || 'develop';
+
+        if (sourceBranch === targetBranch) {
+            throw new Error(`Source branch (${sourceBranch}) and target branch (${targetBranch}) cannot be the same.`);
+        }
+
+        spinner.text = 'Verifying target branch on remote...';
+        await git.fetch();
+        const branches = await git.branch(['-r']);
+        if (!branches.all.includes(`origin/${targetBranch}`)) {
+            throw new Error(`Target branch '${targetBranch}' does not exist on the remote repository. Please check the branch name.`);
+        }
 
         let title = options.title;
         if (!title) {
@@ -73,7 +83,7 @@ async function createPr(options) {
     }
 }
 
-async function approvePr(prNumber, options) {
+export async function approvePr(prNumber, options) {
     const spinner = ora('Approving pull request...').start();
     try {
         const { owner, repo } = await getCurrentRepo();
@@ -120,24 +130,3 @@ async function approvePr(prNumber, options) {
     }
 }
 
-
-export default function (program) {
-    const prCommand = program.command('pr')
-        .description('Manage GitHub pull requests');
-
-    prCommand
-        .command('create')
-        .description('Create a new pull request')
-        .option('-s, --source <branch>', 'Source branch (defaults to current branch)')
-        .option('-t, --target <branch>', 'Target branch (default: develop)')
-        .option('--title <title>', 'PR title')
-        .option('--body <body>', 'PR body')
-        .option('-r, --reviewers <reviewers>', 'Comma-separated list of reviewers')
-        .action(createPr);
-
-    prCommand
-        .command('approve [pr_number]')
-        .description('Approve a pull request')
-        .option('-c, --comment <body>', 'Review comment')
-        .action(approvePr);
-}

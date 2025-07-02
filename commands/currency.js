@@ -1,4 +1,3 @@
-import { Command } from 'commander';
 import axios from 'axios';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -33,8 +32,9 @@ function parseRates(xmlData) {
     return rates;
 }
 
-
-async function convertCurrency(amount, from, to) {
+export async function convertCurrency(amount, options) {
+    const from = options.from || 'USD';
+    const to = options.to || 'VND';
     const xmlData = await getRates();
     if (!xmlData) return;
 
@@ -63,21 +63,8 @@ async function convertCurrency(amount, from, to) {
         result = inVnd / toRate.sell;
     }
 
-
     console.log(
         `${chalk.yellow(amount)} ${chalk.blue(from)} = ${chalk.green(result.toFixed(2))} ${chalk.blue(to)}`
     );
 }
 
-
-export default function (program) {
-  program
-    .command('currency')
-    .description('Convert currency using Vietcombank rates')
-    .option('-f, --from <currency>', 'From currency', 'USD')
-    .option('-t, --to <currency>', 'To currency', 'VND')
-    .argument('<amount>', 'Amount to convert')
-    .action(async (amount, options) => {
-        await convertCurrency(parseFloat(amount), options.from, options.to);
-    });
-}
