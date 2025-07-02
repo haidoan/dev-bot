@@ -1,29 +1,56 @@
-import { Command } from 'commander';
 import notifier from 'node-notifier';
 import chalk from 'chalk';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-function sendNotification(message, options) {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+console.log(__dirname, path.join(__dirname, '../', 'icon', 'bot-icon.png'));
+const trueAnswer = 'Most def.';
+export function sendNotification(message, options) {
     notifier.notify(
         {
             title: options.title || 'Bot Notification',
+            icon: path.join(__dirname, 'bot-icon.png'),
             message: message,
             sound: true,
-            wait: false
+            wait: true,
+            closeLabel: 'Absolutely not',
+            actions: trueAnswer
         },
-        function (err, response) {
+        function (err, response, metadata) {
             if (err) {
                 console.error(chalk.red('Notification error:'), err);
                 return;
             }
+
+            console.log(metadata, response);
+            if (metadata.activationValue !== trueAnswer) {
+                return; // No need to continue
+            }
+
+            notifier.notify(
+                {
+                    title: 'Notifications',
+                    message: 'Do you want to reply to them?',
+                    sound: 'Funk',
+                    // case sensitive
+                    reply: true
+                },
+                function (err, response, metadata) {
+                    if (err) throw err;
+                    console.log(metadata);
+                }
+            );
         }
     );
-    console.log(chalk.green('Notification sent!'));
-}
 
-export default function (program) {
-  program
-    .command('notify <message>')
-    .description('Send a desktop notification')
-    .option('-t, --title <title>', 'Notification title')
-    .action(sendNotification);
+    notifier.on('click', function (notifierObject, options, event) {
+        console.log(chalk.green('Notification clicked!'));
+    });
+
+    notifier.on('timeout', function (notifierObject, options) {
+        console.log(chalk.green('Notification timed out!'));
+    });
+    console.log(chalk.green('Notification sent!'));
 }

@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "bot": {
+            "command": "node",
+            "args": [
+                "./mcp-server.js"
+            ],
+            "cwd": "/Users/haidoan/work/bot"
+        }
+    }
+}
