@@ -8,7 +8,7 @@ const git = simpleGit();
 
 function formatPrBody(body) {
     // replace all ; with - \n
-    return `- ${body}`.replace(/;/g, '- \n');
+    return `- [x] ${body}`.replace(/;/g, '\n- [x]');
 }
 
 async function getCurrentUser() {
@@ -30,16 +30,21 @@ async function getCurrentRepo() {
     return { owner, repo };
 }
 
+async function getReviewers() {
+    const { owner, repo } = await getCurrentRepo();
+    const { data: collaborators } = await octokit.rest.repos.listCollaborators({
+        owner,
+        repo,
+    });
+    return collaborators.map(c => c.login);
+}
+
 export async function listReviewers() {
     const spinner = ora('Fetching reviewers...').start();
     try {
-        const { owner, repo } = await getCurrentRepo();
-        const { data: collaborators } = await octokit.rest.repos.listCollaborators({
-            owner,
-            repo,
-        });
+        const reviewers = await getReviewers();
         spinner.succeed('Available reviewers:');
-        collaborators.forEach(c => console.log(`- ${c.login}`));
+        reviewers.forEach(r => console.log(`- ${r}`));
     } catch (error) {
         spinner.fail('Failed to fetch reviewers.');
         console.error(chalk.red(error.message));
@@ -74,10 +79,24 @@ export async function createPr(options) {
             }
         }
 
-        const body = options.body ? formatPrBody(options.body) : 'Please review this PR.';
-        const reviewers = options.reviewers || '';
+        const body = options.body || 'Please review this PR.';
+        let reviewers = options.reviewers;
 
         spinner.stop();
+
+        if (!reviewers) {
+            const allReviewers = await getReviewers();
+            const currentUser = await getCurrentUser();
+            const { selectedReviewers } = await inquirer.prompt([
+                {
+                    type: 'checkbox',
+                    name: 'selectedReviewers',
+                    message: 'Select reviewers:',
+                    choices: allReviewers.filter(r => r !== currentUser),
+                }
+            ]);
+            reviewers = selectedReviewers.join(',');
+        }
 
         console.log(chalk.bold('You are about to create a new pull request with these details:'));
         console.log(`  ${chalk.bold('Source:')}      ${sourceBranch}`);
@@ -120,7 +139,7 @@ export async function createPr(options) {
             owner,
             repo,
             title,
-            body,
+            body: formatPrBody(body),
             head: sourceBranch,
             base: targetBranch,
         });
