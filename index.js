@@ -5,6 +5,7 @@ import { commandRegistry } from './lib/commands.js';
 import interactiveChat from './commands/interactive.js';
 import { createPr, approvePr, listMyPrs, listMyRepos } from './commands/pr.js';
 import { listWeeklyMeetings, listTodayMeetings } from './commands/calendar.js';
+import { startPomodoro, stopPomodoro } from './commands/pomodoro.js';
 
 const program = new Command();
 
@@ -87,6 +88,20 @@ async function main() {
     .command('today')
     .description('List all meetings for today')
     .action(listTodayMeetings);
+
+  const pomodoroCommand = program.command('pomodoro')
+    .description('Manage Pomodoro timer');
+
+  pomodoroCommand
+    .command('start')
+    .description('Start the Pomodoro timer')
+    .option('--run-timer', 'Internal flag to run the timer process', { hidden: true })
+    .action((options) => startPomodoro(options));
+
+  pomodoroCommand
+    .command('stop')
+    .description('Stop the Pomodoro timer')
+    .action(stopPomodoro);
 
   program.command('interactive')
     .description('Start an interactive chat session with the bot')
