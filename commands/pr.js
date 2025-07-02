@@ -6,6 +6,11 @@ import octokit from '../lib/github.js';
 
 const git = simpleGit();
 
+function formatPrBody(body) {
+    // replace all ; with - \n
+    return `- ${body}`.replace(/;/g, '- \n');
+}
+
 async function getCurrentUser() {
     const { data: user } = await octokit.rest.users.getAuthenticated();
     return user.login;
@@ -69,7 +74,7 @@ export async function createPr(options) {
             }
         }
 
-        const body = options.body || 'Please review this PR.';
+        const body = options.body ? formatPrBody(options.body) : 'Please review this PR.';
         const reviewers = options.reviewers || '';
 
         spinner.stop();
