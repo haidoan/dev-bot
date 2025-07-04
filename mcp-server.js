@@ -7,7 +7,7 @@ import { decodeJwt } from './commands/jwt.js';
 import { convertCurrency } from './commands/currency.js';
 import { sendNotification } from './commands/notify.js';
 import { createPr, approvePr, listMyPrs, listMyRepos } from './commands/pr.js';
-import { listWeeklyMeetings, listTodayMeetings } from './commands/calendar.js';
+import { listWeeklyMeetings, listTodayMeetings, addCalendarEvent } from './commands/calendar.js';
 import { startPomodoro, stopPomodoro } from './commands/pomodoro.js';
 import interactiveChat from './commands/interactive.js';
 
@@ -131,6 +131,22 @@ const tools = [
             type: 'object',
             properties: {}
         }
+    },
+    {
+        name: 'add_calendar_event',
+        description: 'Add a new event to the Google Calendar',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                summary: { type: 'string', description: 'Event summary or title' },
+                startTime: { type: 'string', description: 'Event start time in ISO 8601 format' },
+                endTime: { type: 'string', description: 'Event end time in ISO 8601 format' },
+                description: { type: 'string', description: 'Event description' },
+                location: { type: 'string', description: 'Event location' },
+                attendees: { type: 'string', description: 'Comma-separated list of attendee emails' }
+            },
+            required: ['summary', 'startTime', 'endTime']
+        }
     }
 ];
 
@@ -217,6 +233,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 stopPomodoro();
                 return {
                     content: [{ type: 'text', text: 'Pomodoro timer stopped' }]
+                };
+
+            case 'add_calendar_event':
+                const eventResult = await addCalendarEvent(args.summary, args.startTime, args.endTime, args.description, args.location, args.attendees);
+                return {
+                    content: [{ type: 'text', text: JSON.stringify(eventResult) }]
                 };
 
             default:
