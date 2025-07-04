@@ -10,7 +10,7 @@ import { URL } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Google Calendar setup
-const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
+const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 const TOKEN_PATH = path.join(__dirname, '../.google-token.json');
 const CREDENTIALS_PATH = path.join(__dirname, '../.google-credentials.json');
 
@@ -458,3 +458,82 @@ export async function listTodayMeetings() {
         }
     }
 }
+
+
+
+export async function addEventForAI({ summary, description, location, start, end, attendees }) {
+    const auth = await authorize();
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    const event = {
+        summary,
+        description,
+        location,
+        start: {
+            dateTime: start,
+            timeZone: 'UTC',
+        },
+        end: {
+            dateTime: end,
+            timeZone: 'UTC',
+        },
+        attendees: attendees ? attendees.map(email => ({ email })) : [],
+    };
+
+    const response = await calendar.events.insert({
+        calendarId: 'primary',
+        resource: event,
+    });
+
+    return {
+        summary: 'Event created successfully.',
+        htmlLink: response.data.htmlLink,
+        eventId: response.data.id,
+    };
+}
+
+export async function addCalendarEvent(summary, startTime, endTime, description, location, attendees) {
+    const spinner = ora('Creating new calendar event...').start();
+
+    try {
+        const auth = await authorize();
+        const calendar = google.calendar({ version: 'v3', auth });
+
+        const event = {
+            summary,
+            description,
+            location,
+            start: {
+                dateTime: new Date(startTime).toISOString(),
+                timeZone: 'UTC',
+            },
+            end: {
+                dateTime: new Date(endTime).toISOString(),
+                timeZone: 'UTC',
+            },
+            attendees: attendees ? attendees.split(',').map(email => ({ email: email.trim() })) : [],
+        };
+
+        const response = await calendar.events.insert({
+            calendarId: 'primary',
+            resource: event,
+        });
+
+        spinner.succeed(chalk.green('✓ Event created successfully!'));
+        console.log(`  ${chalk.bold('Event:')} ${response.data.summary}`);
+        console.log(`  ${chalk.bold('Link:')} ${chalk.blue(response.data.htmlLink)}`);
+
+        return response.data;
+
+    } catch (error) {
+        spinner.fail('Failed to create event.');
+        if (error.message.includes('invalid_grant')) {
+            console.error(chalk.red('Authentication error. Your token might be expired or invalid.'));
+            console.log(chalk.yellow('Try deleting .google-token.json and re-authorizing.'));
+        } else {
+            console.error(chalk.red(error.message));
+        }
+        throw error;
+    }
+}
+

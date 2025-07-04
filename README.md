@@ -43,3 +43,14 @@ When you're in the `bot interactive` session, the AI has access to the following
 *   **Decode a JWT:** Decodes a JWT string that you provide in the chat.
 *   **Convert Currency:** Fetches the latest exchange rates to convert between currencies (e.g., "what's the rate for USD to VND?").
 *   **Send a Notification:** Sends a desktop notification with a title and message that you specify.
+
+## Troubleshooting
+
+### Google Calendar Authorization
+
+If you encounter an `insufficientPermissions` error or other issues with Google Calendar, you may need to re-authorize the application. This is typically required if new calendar-related features are added that require broader permissions (e.g., writing events when it was previously read-only).
+
+To re-authorize:
+1.  Delete the token file stored at the root of this project: `.google-token.json`
+2.  Run any calendar command again (e.g., `bot calendar today`).
+3.  Your browser will open, prompting you to log in and approve the new permissions.
