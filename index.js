@@ -90,7 +90,7 @@ async function main() {
     .action(listTodayMeetings);
 
   const pomodoroCommand = program.command('pomodoro')
-    .description('Manage Pomodoro timer');
+    .description('Start a Pomodoro timer (25min work + 5min break)');
 
   pomodoroCommand
     .command('start')
@@ -100,7 +100,7 @@ async function main() {
 
   pomodoroCommand
     .command('stop')
-    .description('Stop the Pomodoro timer')
+    .description('Stop the running Pomodoro timer')
     .action(stopPomodoro);
 
   program.command('interactive')

@@ -8,6 +8,7 @@ import { convertCurrency } from './commands/currency.js';
 import { sendNotification } from './commands/notify.js';
 import { createPr, approvePr, listMyPrs, listMyRepos } from './commands/pr.js';
 import { listWeeklyMeetings, listTodayMeetings } from './commands/calendar.js';
+import { startPomodoro, stopPomodoro } from './commands/pomodoro.js';
 import interactiveChat from './commands/interactive.js';
 
 const server = new Server({
@@ -114,6 +115,22 @@ const tools = [
             type: 'object',
             properties: {}
         }
+    },
+    {
+        name: 'start_pomodoro',
+        description: 'Start a Pomodoro timer',
+        inputSchema: {
+            type: 'object',
+            properties: {}
+        }
+    },
+    {
+        name: 'stop_pomodoro',
+        description: 'Stop the Pomodoro timer',
+        inputSchema: {
+            type: 'object',
+            properties: {}
+        }
     }
 ];
 
@@ -188,6 +205,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const todayMeetings = await listTodayMeetings();
                 return {
                     content: [{ type: 'text', text: JSON.stringify(todayMeetings) }]
+                };
+
+            case 'start_pomodoro':
+                startPomodoro();
+                return {
+                    content: [{ type: 'text', text: 'Pomodoro timer started' }]
+                };
+
+            case 'stop_pomodoro':
+                stopPomodoro();
+                return {
+                    content: [{ type: 'text', text: 'Pomodoro timer stopped' }]
                 };
 
             default:

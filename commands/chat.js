@@ -4,7 +4,7 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { tools, toolDeclarations } from '../lib/tools.js';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -45,8 +45,8 @@ async function chat(prompt) {
 
 
 export default function (program) {
-  program
-    .command('chat <prompt>')
-    .description('Chat with the Gemini API (with function calling)')
-    .action(chat);
+    program
+        .command('chat <prompt>')
+        .description('Chat with the Gemini API (with function calling)')
+        .action(chat);
 }

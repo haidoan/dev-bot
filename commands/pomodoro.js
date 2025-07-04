@@ -6,11 +6,10 @@ import { spawn } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pidFilePath = path.join(process.cwd(), '.pomodoro.pid');
-console.log("pidFilePath", pidFilePath);
 
 let timerId = null;
 let sessionCount = 0;
-const workDuration = 25 * 1000; // 25 seconds for testing
+const workDuration = 10 * 1000; // 25 seconds for testing
 const breakDuration = 5 * 1000; // 5 seconds for testing
 
 function sendInteractiveNotification(message, title, actions) {
@@ -79,7 +78,6 @@ function onBreakEnd() {
 }
 
 export function startPomodoro(options) {
-    console.log("options", options);
     if (options.runTimer === true) {
         // This is the background process
         process.on('SIGTERM', () => {
