@@ -10,7 +10,11 @@ import { URL } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Google Calendar setup
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+const SCOPES = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.send'
+];
 const TOKEN_PATH = path.join(__dirname, '../.google-token.json');
 const CREDENTIALS_PATH = path.join(__dirname, '../.google-credentials.json');
 
