@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { tools, toolDeclarations } from '../lib/tools.js';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 

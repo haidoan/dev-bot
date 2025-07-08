@@ -9,6 +9,7 @@ import { sendNotification } from './commands/notify.js';
 import { createPr, approvePr, listMyPrs, listMyRepos } from './commands/pr.js';
 import { getWeeklyCalendarForAI, getDailyCalendarForAI, addCalendarEvent } from './commands/calendar.js';
 import { startPomodoro, stopPomodoro } from './commands/pomodoro.js';
+import interactiveChat from './commands/interactive.js';
 
 const server = new Server({
     name: 'bot-mcp-server',
@@ -167,36 +168,72 @@ const tools = [
     }
 ];
 
-// Helper function to create MCP-compliant response
-function createResponse(data) {
-    // Handle null/undefined data
-    if (data === null || data === undefined) {
-        data = { error: 'No data returned' };
+// Validation function to ensure response is MCP-compliant
+function validateResponse(response) {
+    if (!response || typeof response !== 'object') {
+        return false;
     }
 
-    // Convert to string
-    let text;
+    if (!Array.isArray(response.content) || response.content.length === 0) {
+        return false;
+    }
+
+    const content = response.content[0];
+    if (!content || content.type !== 'text' || typeof content.text !== 'string') {
+        return false;
+    }
+
+    return true;
+}
+
+// Helper function to ensure valid response format
+function createResponse(data) {
+    console.log('[MCP] createResponse input:', typeof data, data === null ? 'null' : data === undefined ? 'undefined' : 'has value');
+
+    let textContent;
+
     if (typeof data === 'string') {
-        text = data;
+        textContent = data;
+    } else if (data === null || data === undefined) {
+        textContent = JSON.stringify({ error: 'No data returned' });
     } else {
         try {
-            text = JSON.stringify(data);
+            textContent = JSON.stringify(data);
         } catch (error) {
-            text = JSON.stringify({ error: 'Serialization failed' });
+            console.error('[MCP] JSON.stringify error:', error.message);
+            textContent = JSON.stringify({ error: 'Failed to serialize data' });
         }
     }
 
-    // Ensure text is valid
-    if (typeof text !== 'string' || text === '') {
-        text = JSON.stringify({ error: 'Invalid data' });
+    // Ensure textContent is always a valid string
+    if (typeof textContent !== 'string' || textContent === '') {
+        console.warn('[MCP] Invalid textContent, using fallback');
+        textContent = JSON.stringify({ error: 'Invalid response data' });
     }
 
-    return {
+    console.log('[MCP] createResponse output text length:', textContent.length);
+
+    const response = {
         content: [{
             type: 'text',
-            text: text
+            text: textContent
         }]
     };
+
+    console.log('[MCP] createResponse final structure:', JSON.stringify(response, null, 2));
+
+    // Validate the response before returning
+    if (!validateResponse(response)) {
+        console.error('[MCP] Invalid response structure, creating fallback');
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({ error: 'Response validation failed' })
+            }]
+        };
+    }
+
+    return response;
 }
 
 // Handle list tools request
@@ -207,6 +244,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool execution
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+
+
 
     try {
         switch (name) {
@@ -248,12 +287,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 return createResponse(myRepos);
 
             case 'list_weekly_meetings':
-                const weeklyMeetings = await getWeeklyCalendarForAI();
-                return createResponse(weeklyMeetings || { events: [], summary: 'No events found' });
+                try {
+                    console.log('[MCP] Calling getWeeklyCalendarForAI...');
+                    const weeklyMeetings = await getWeeklyCalendarForAI();
+                    console.log('[MCP] Weekly meetings result:', typeof weeklyMeetings, weeklyMeetings ? 'has data' : 'no data');
+                    const result = weeklyMeetings || { events: [], summary: 'No events found' };
+                    console.log('[MCP] Returning weekly result:', typeof result);
+                    return createResponse(result);
+                } catch (error) {
+                    console.error('[MCP] Error in list_weekly_meetings:', error.message);
+                    return createResponse({ error: error.message || 'Unknown calendar error', events: [] });
+                }
 
             case 'list_today_meetings':
-                const todayMeetings = await getDailyCalendarForAI();
-                return createResponse(todayMeetings || { events: [], summary: 'No events found' });
+                try {
+                    console.log('[MCP] Calling getDailyCalendarForAI...');
+                    const todayMeetings = await getDailyCalendarForAI();
+                    console.log('[MCP] Today meetings result:', typeof todayMeetings, todayMeetings ? 'has data' : 'no data');
+                    const result = todayMeetings || { events: [], summary: 'No events found' };
+                    console.log('[MCP] Returning today result:', typeof result);
+                    return createResponse(result);
+                } catch (error) {
+                    console.error('[MCP] Error in list_today_meetings:', error.message);
+                    return createResponse({ error: error.message || 'Unknown calendar error', events: [] });
+                }
 
             case 'start_pomodoro':
                 startPomodoro();
@@ -271,10 +328,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 throw new Error(`Unknown tool: ${name}`);
         }
     } catch (error) {
-        return createResponse({
-            error: error?.message || 'Unknown error',
-            tool: name
+        const errorMessage = error?.message || 'Unknown error occurred';
+        console.error(`[MCP] Error executing ${name}:`, error);
+        const errorResponse = createResponse({
+            error: errorMessage,
+            tool: name,
+            timestamp: new Date().toISOString()
         });
+        errorResponse.isError = true;
+        return errorResponse;
     }
 });
 

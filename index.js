@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import { commandRegistry } from './lib/commands.js';
 import interactiveChat from './commands/interactive.js';
 import { createPr, approvePr, listMyPrs, listMyRepos } from './commands/pr.js';
-import { listWeeklyMeetings, listTodayMeetings } from './commands/calendar.js';
+import { listWeeklyMeetings, listTodayMeetings, addCalendarEvent } from './commands/calendar.js';
 import { startPomodoro, stopPomodoro } from './commands/pomodoro.js';
 
 const program = new Command();
@@ -89,8 +89,22 @@ async function main() {
     .description('List all meetings for today')
     .action(listTodayMeetings);
 
+  calendarCommand
+    .command('add')
+    .description('Add a new event to the calendar')
+    .requiredOption('-s, --summary <summary>', 'Event summary or title')
+    .requiredOption('--startTime <startTime>', 'Event start time (e.g., "2025-07-04T10:00:00-07:00")')
+    .requiredOption('--endTime <endTime>', 'Event end time (e.g., "2025-07-04T11:00:00-07:00")')
+    .option('-d, --description <description>', 'Event description')
+    .option('-l, --location <location>', 'Event location')
+    .option('-a, --attendees <attendees>', 'Comma-separated list of attendee emails')
+    .action((options) => {
+      const { summary, startTime, endTime, description, location, attendees } = options;
+      addCalendarEvent(summary, startTime, endTime, description, location, attendees);
+    });
+
   const pomodoroCommand = program.command('pomodoro')
-    .description('Manage Pomodoro timer');
+    .description('Start a Pomodoro timer (25min work + 5min break)');
 
   pomodoroCommand
     .command('start')
@@ -100,7 +114,7 @@ async function main() {
 
   pomodoroCommand
     .command('stop')
-    .description('Stop the Pomodoro timer')
+    .description('Stop the running Pomodoro timer')
     .action(stopPomodoro);
 
   program.command('interactive')

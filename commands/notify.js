@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-console.log(__dirname, path.join(__dirname, '../', 'icon', 'bot-icon.png'));
 const trueAnswer = 'Most def.';
 export function sendNotification(message, options) {
     notifier.notify(
@@ -24,7 +23,6 @@ export function sendNotification(message, options) {
                 return;
             }
 
-            console.log(metadata, response);
             if (metadata.activationValue !== trueAnswer) {
                 return; // No need to continue
             }
