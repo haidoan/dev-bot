@@ -1,4 +1,3 @@
-import { Command } from 'commander';
 import axios from 'axios';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -6,25 +5,25 @@ import ora from 'ora';
 const VCB_API_URL = 'https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx';
 
 async function getRates() {
-  const spinner = ora('Fetching exchange rates...').start();
-  try {
-    const { data } = await axios.get(VCB_API_URL);
-    spinner.succeed('Rates fetched!');
-    return data;
-  } catch (error) {
-    spinner.fail('Failed to fetch rates.');
-    console.error(chalk.red(error.message));
-    return null;
-  }
+    const spinner = ora('Fetching exchange rates...').start();
+    try {
+        const { data } = await axios.get(VCB_API_URL);
+        spinner.succeed('Rates fetched!');
+        return data;
+    } catch (error) {
+        spinner.fail('Failed to fetch rates.');
+        console.error(chalk.red(error.message));
+        return null;
+    }
 }
 
 function parseRates(xmlData) {
     const rates = {};
-    const regex = /<Exrate CurrencyCode="(\w+)" CurrencyName="([^"]+)" Buy="([^"]+)" Transfer="([^"]+)" Sell="([^"]+)"\/>/g;
+    const regex = /<Exrate CurrencyCode="(\w+)" CurrencyName="([^"]*)"\s+Buy="([^"]*)"\s+Transfer="([^"]*)"\s+Sell="([^"]*)"\s*\/>/g;
     let match;
     while ((match = regex.exec(xmlData)) !== null) {
         rates[match[1]] = {
-            name: match[2],
+            name: match[2].trim(),
             buy: parseFloat(match[3].replace(/,/g, '')),
             transfer: parseFloat(match[4].replace(/,/g, '')),
             sell: parseFloat(match[5].replace(/,/g, '')),
@@ -33,13 +32,13 @@ function parseRates(xmlData) {
     return rates;
 }
 
-
-async function convertCurrency(amount, from, to) {
+export async function convertCurrency(amount, options) {
+    const from = options.from || 'USD';
+    const to = options.to || 'VND';
     const xmlData = await getRates();
     if (!xmlData) return;
 
     const rates = parseRates(xmlData);
-
     const fromRate = rates[from];
     const toRate = rates[to];
 
@@ -63,21 +62,8 @@ async function convertCurrency(amount, from, to) {
         result = inVnd / toRate.sell;
     }
 
-
     console.log(
         `${chalk.yellow(amount)} ${chalk.blue(from)} = ${chalk.green(result.toFixed(2))} ${chalk.blue(to)}`
     );
 }
 
-
-export default function (program) {
-  program
-    .command('currency')
-    .description('Convert currency using Vietcombank rates')
-    .option('-f, --from <currency>', 'From currency', 'USD')
-    .option('-t, --to <currency>', 'To currency', 'VND')
-    .argument('<amount>', 'Amount to convert')
-    .action(async (amount, options) => {
-        await convertCurrency(parseFloat(amount), options.from, options.to);
-    });
-}

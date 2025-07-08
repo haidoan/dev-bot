@@ -122,6 +122,7 @@ echo "Pushing branch $SOURCE_BRANCH..."
 git push -u origin "$SOURCE_BRANCH"
 
 # Create PR command
+
 PR_CMD="gh pr create --base \"$TARGET_BRANCH\" --head \"$SOURCE_BRANCH\" --title \"$PR_TITLE\" --body \"$PR_BODY\""
 
 # Add reviewers if specified
